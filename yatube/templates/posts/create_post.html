@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title%}
+  {% if form.instance.pk %} Редактировать запись {% else %} Добавить запись {% endif %}
+{% endblock %}
+{% block content %}
+  <body>	  
+    <main>
+      <div class="card">
+        <div class="card-header">       
+          {% if form.instance.pk %} Редактировать запись {% else %} Новый пост {% endif %}             
+        </div>
+        <div class="card-body">        
+          <div>        
+            {% include 'includes/form_errors.html' %}
+          </div>
+          <form method="post" enctype="multipart/form-data" action =
+            {% if form.instance.pk %}
+              "{% url 'posts:post_edit' form.instance.pk %}"
+            {% else %}
+              "{% url 'posts:post_create' %}"
+            {% endif %}>
+            {% csrf_token %}
+            <div>        
+              {% include 'includes/fields_in_form.html' %}
+            </div>
+            <div class="d-flex justify-content-end">
+              <button type="submit" class="btn btn-primary">
+                {% if form.instance.pk %}Сохранить{% else %}Добавить{% endif %} 
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </body>
+{% endblock %}

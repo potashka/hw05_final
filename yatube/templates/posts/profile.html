@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title%}
+  Профайл пользователя {{author}}
+{% endblock %}
+{% block content %}
+  <h1><pre>Все посты пользователя: {{author}}</pre></h1>
+  <h3><pre>Всего постов: {{ author.posts.count }}</pre></h3>
+  {% include 'posts/includes/to_follow.html' %}
+  {% for post in page_obj %}
+    {% include 'posts/includes/post_template.html' %}
+    {% if not forloop.last %}<hr>{% endif %}
+  {% endfor %}
+  {% include 'posts/includes/paginator.html' %}
+{% endblock %}

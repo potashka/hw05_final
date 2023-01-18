@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+<title>
+  {% block title %}Технологии{% endblock %}
+</title>
+{% block content %}
+<div class="row">
+  <h1>Вот что я умею</h1>
+  <aside class="col-12 col-md-3">
+    <ul class="list-group list-group-flush">
+      <li class="list-group-item">
+        Python
+      </li>
+      <li class="list-group-item">
+        Django
+      </li>
+    </ul>
+  </aside>
+  <article class="col-12 col-md-9">
+    <p>
+      При создании сайта использован фреймворк Джанго, в том числе построение моделей,
+      маршрутизация, создание вью-функций и шаблонов и подключение статических файлов, создание связей
+      между моделями через класс ForeignKey, использование форм, формирование URL-адресов в шаблонах.
+      Были использованы базовые знания об ООП, замыканиях и декораторах в Python.
+      При создании шаблонов использовался язык html. Был использован фреймворк bootsrap для верстки макета.
+    </p>
+  </article>
+</div>
+{% endblock %}
