@@ -1,13 +1,11 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.cache import cache_page
 
 from .forms import CommentForm, PostForm
 from .models import Follow, Group, Post, User
 from .utils import get_page_context
 
 
-@cache_page(20)
 def index(request):
     posts = Post.objects.select_related('author', 'group').all()
     page_obj = get_page_context(request, posts)
@@ -32,9 +30,10 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts = author.posts.select_related('group')
     page_obj = get_page_context(request, posts)
-    following = request.user.is_authenticated
-    if following:
-        following = author.following.filter(user=request.user).exists()
+    following = (
+        request.user.is_authenticated and author.following
+        .filter(user=request.user).exists()
+    )
     context = {
         'author': author,
         'page_obj': page_obj,
@@ -44,7 +43,11 @@ def profile(request, username):
 
 
 def post_detail(request, post_id):
-    post = get_object_or_404(Post, pk=post_id)
+    post = (
+        Post.objects.select_related('author')
+        .prefetch_related('comments__author')
+        .get(pk=post_id)
+    )
     form = CommentForm(request.POST or None)
     context = {
         'post': post,
@@ -105,8 +108,10 @@ def add_comment(request, post_id):
 
 @login_required
 def follow_index(request):
-    posts = Post.objects.filter(
-        author__following__user=request.user)
+    posts = (
+        Post.objects.select_related('author')
+        .filter(author__following__user=request.user)
+    )
     page_obj = get_page_context(request, posts)
     context = {'page_obj': page_obj}
     return render(request, 'posts/follow.html', context)

@@ -95,7 +95,7 @@ class Comment(models.Model):
     )
 
     class Meta:
-        ordering = ['-created']
+        ordering = ('-created',)
         verbose_name_plural = 'Коментарии'
         verbose_name = 'Коментарий'
 
@@ -118,6 +118,12 @@ class Follow(models.Model):
     )
 
     class Meta:
+        constraints = (
+            models.UniqueConstraint(
+                fields=['user', 'author'],
+                name='subscription_unique'
+            ),
+        )
         verbose_name_plural = 'Подписки'
         verbose_name = 'Подписка'
 

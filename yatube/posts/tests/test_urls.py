@@ -23,6 +23,27 @@ class PostURLTests(TestCase):
             text='Тестовый пост',
             group=cls.group
         )
+        cls.pages = (
+            ('posts:main_page', None,
+                '/'),
+            ('posts:post_create', None,
+                '/create/'),
+            ('posts:group_list', (cls.group.slug,),
+                f'/group/{cls.group.slug}/'),
+            ('posts:profile', (cls.user.username,),
+                f'/profile/{cls.user.username}/'),
+            ('posts:post_detail', (cls.post.pk,),
+                f'/posts/{cls.post.pk}/'),
+            ('posts:post_edit', (cls.post.pk,),
+                f'/posts/{cls.post.pk}/edit/'),
+            ('posts:follow_index', None, '/follow/'),
+            ('posts:profile_follow', (cls.author.username,),
+                f'/profile/{cls.author.username}/follow/'),
+            ('posts:profile_unfollow', (cls.user.username,),
+                f'/profile/{cls.user.username}/unfollow/'),
+            ('posts:add_comment', (cls.post.pk,),
+                f'/posts/{cls.post.pk}/comment/')
+        )
 
     def setUp(self):
         self.authorized_client = Client()
@@ -40,6 +61,7 @@ class PostURLTests(TestCase):
             ('posts:post_detail', (self.post.pk,), 'posts/post_detail.html'),
             ('posts:post_create', None, 'posts/create_post.html'),
             ('posts:post_edit', (self.post.pk,), 'posts/create_post.html'),
+            ('posts:follow_index', None, 'posts/follow.html')
         )
         for name, args, template in templates_url_names:
             with self.subTest(name=name):
@@ -50,71 +72,64 @@ class PostURLTests(TestCase):
 
     def test_url_names(self):
         """Проверка соответствия url ссылок именам"""
-        url_names = (
-            ('posts:main_page', None,
-                '/'),
-            ('posts:post_create', None,
-                '/create/'),
-            ('posts:group_list', (self.group.slug,),
-                f'/group/{self.group.slug}/'),
-            ('posts:profile', (self.user.username,),
-                f'/profile/{self.user.username}/'),
-            ('posts:post_detail', (self.post.pk,),
-                f'/posts/{self.post.pk}/'),
-            ('posts:post_edit', (self.post.pk,),
-                f'/posts/{self.post.pk}/edit/'),
-        )
-        for name, args, url in url_names:
+        for name, args, url in self.pages:
             with self.subTest(name=name):
                 self.assertEqual(reverse(name, args=args), url)
 
     def test_urls_author(self):
         """Доступ автора к страницам"""
-        pages = (
-            ('posts:main_page', None,
-                '/'),
-            ('posts:post_create', None,
-                '/create/'),
-            ('posts:group_list', (self.group.slug,),
-                f'/group/{self.group.slug}/'),
-            ('posts:profile', (self.user.username,),
-                f'/profile/{self.user.username}/'),
-            ('posts:post_detail', (self.post.pk,),
-                f'/posts/{self.post.pk}/'),
-            ('posts:post_edit', (self.post.pk,),
-                f'/posts/{self.post.pk}/edit/'),
-        )
-        for name, args, url in pages:
+        for name, args, url in self.pages:
             with self.subTest(name=name):
                 response = self.authorized_author.get(reverse(name, args=args))
                 error = f'Ошибка: нет доступа к странице {url}'
-                self.assertEqual(response.status_code, HTTPStatus.OK, error)
-
-    def test_urls_authorized_client(self):
-        """Доступ авторизованного пользователя"""
-        pages = (
-            ('posts:main_page', None,
-                '/'),
-            ('posts:group_list', (self.group.slug,),
-                f'/group/{self.group.slug}/'),
-            ('posts:profile', (self.user.username,),
-                f'/profile/{self.user.username}/'),
-            ('posts:post_detail', (self.post.pk,),
-                f'/posts/{self.post.pk}/'),
-            ('posts:post_create', None,
-                '/create/'),
-            ('posts:post_edit', (self.post.pk,),
-                f'/posts/{self.post.pk}/edit/'),
-        )
-        for name, args, url in pages:
-            with self.subTest(name=name):
-                response = self.authorized_client.get(reverse(name, args=args))
-                error = f'Ошибка: нет доступа к странице {url}'
-                if name == 'posts:post_edit':
+                if name == 'posts:add_comment':
                     self.assertRedirects(
                         response,
                         reverse('posts:post_detail',
                                 args=(self.post.pk,))
+                    )
+                elif name == 'posts:profile_follow':
+                    self.assertRedirects(
+                        response,
+                        reverse('posts:profile',
+                                args=(self.author,))
+                    )
+                elif name == 'posts:profile_unfollow':
+                    self.assertEqual(
+                        response.status_code,
+                        404,
+                        error
+                    )
+                else:
+                    self.assertEqual(
+                        response.status_code,
+                        HTTPStatus.OK,
+                        error
+                    )
+
+    def test_urls_authorized_client(self):
+        """Доступ авторизованного пользователя"""
+        for name, args, url in self.pages:
+            with self.subTest(name=name):
+                response = self.authorized_client.get(reverse(name, args=args))
+                error = f'Ошибка: нет доступа к странице {url}'
+                if name in ('posts:post_edit', 'posts:add_comment',):
+                    self.assertRedirects(
+                        response,
+                        reverse('posts:post_detail',
+                                args=(self.post.pk,))
+                    )
+                elif name == 'posts:profile_unfollow':
+                    self.assertEqual(
+                        response.status_code,
+                        404,
+                        error
+                    )
+                elif name == 'posts:profile_follow':
+                    self.assertRedirects(
+                        response,
+                        reverse('posts:profile',
+                                args=(self.author,))
                     )
                 else:
                     self.assertEqual(
@@ -125,26 +140,16 @@ class PostURLTests(TestCase):
 
     def test_urls_anonymous_guest_client(self):
         """Доступ неавторизованного пользователя"""
-        pages = (
-            ('posts:main_page', None,
-                '/'),
-            ('posts:group_list', (self.group.slug,),
-                f'/group/{self.group.slug}/'),
-            ('posts:profile', (self.user.username,),
-                f'/profile/{self.user.username}/'),
-            ('posts:post_detail', (self.post.pk,),
-                f'/posts/{self.post.pk}/'),
-            ('posts:post_create', None,
-                '/create/'),
-            ('posts:post_edit', (self.post.pk,),
-                f'/posts/{self.post.pk}/edit/'),
+        login_required_names = (
+            'posts:post_create', 'posts:post_edit',
+            'posts:add_comment', 'posts:profile_follow',
+            'posts:profile_unfollow', 'posts:follow_index',
         )
-        create_edit_names = ['posts:post_create', 'posts:post_edit']
-        for name, args, url in pages:
+        for name, args, url in self.pages:
             with self.subTest(name=name):
                 response = self.client.get(reverse(name, args=args))
                 error = f'Ошибка: нет доступа к странице {url}'
-                if name in create_edit_names:
+                if name in login_required_names:
                     reverse_login = reverse('users:login')
                     reverse_name = reverse(name, args=args)
                     self.assertRedirects(

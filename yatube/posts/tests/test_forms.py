@@ -147,6 +147,8 @@ class PostFormTests(TestCase):
                          'Ошибка: комментарий не добавлен.')
         comment = Comment.objects.first()
         self.assertEqual(comment.text, form_data['text'])
+        self.assertEqual(comment.author, self.user)
+        self.assertEqual(comment.post_id, self.post.pk)
 
     def test_not_authorised_user_add_comment(self):
         '''Проверка запрета создания комментария без авторизации'''
@@ -163,8 +165,8 @@ class PostFormTests(TestCase):
             follow=True
         )
         self.assertEqual(response.status_code, HTTPStatus.OK)
-        self.assertNotEqual(
+        self.assertEqual(
             Comment.objects.count(),
-            comments_count + 1,
+            comments_count,
             'Неваторизованный пользователь добавил комментарий'
         )

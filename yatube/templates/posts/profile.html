@@ -1,10 +1,11 @@
 {% extends 'base.html' %}
 {% block title%}
-  Профайл пользователя {{author}}
+  Профайл пользователя {{ author }}
 {% endblock %}
 {% block content %}
-  <h1><pre>Все посты пользователя: {{author}}</pre></h1>
-  <h3><pre>Всего постов: {{ author.posts.count }}</pre></h3>
+  <h1><pre>Все посты пользователя: {{ author }}</pre></h1>
+  <h3><pre>Подписан на {{author.follower.count}} авторов, подписчиков {{author.following.count}}.</pre></h3>
+  <h3><pre>Всего своих постов: {{ author.posts.count }}.</pre></h3>
   {% include 'posts/includes/to_follow.html' %}
   {% for post in page_obj %}
     {% include 'posts/includes/post_template.html' %}

@@ -1,4 +1,3 @@
-from http import HTTPStatus
 import shutil
 import tempfile
 
@@ -61,7 +60,6 @@ class PostViewsTests(TestCase):
 
     def sample_context_test_func(self, context, post=False):
         """Шаблон фнукции для тестирования контекста"""
-        # cache.clear()
         if post:
             self.assertIn('post', context)
             post = context['post']
@@ -177,6 +175,7 @@ class PostViewsTests(TestCase):
 class PaginatorViewsTest(TestCase):
 
     def setUp(self):
+        # self.author = User.objects.create_user(username='random_author')
         self.user = User.objects.create_user(username='random_name')
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
@@ -190,8 +189,11 @@ class PaginatorViewsTest(TestCase):
                      author=self.user)
             )
         Post.objects.bulk_create(posts)
+        Follow.objects.create(
+            user=self.user,
+            author=self.user)
 
-    def test__page_contains__records(self):
+    def test_page_contains_records(self):
         '''Проверка количества постов на странице'''
         page_urls = (
             ('posts:main_page', None),
@@ -218,6 +220,29 @@ class PaginatorViewsTest(TestCase):
                             'Ошибка:неверное количество постов.'
                         )
 
+    def test_follow_page_contains_records(self):
+        '''Проверка количества постов на странице follower'''
+        page_urls = (
+            ('posts:follow_index', None),
+        )
+        pages = (
+            ('?page=1', QUANTITY_OF_POSTS),
+            ('?page=2', (NUM_POSTS_PAG_TEST - QUANTITY_OF_POSTS)),
+        )
+        for url, args in page_urls:
+            with self.subTest():
+                for page, count in pages:
+                    with self.subTest():
+                        response = self.authorized_client.get(
+                            reverse(url, args=args)
+                            + page
+                        )
+                        self.assertEqual(
+                            len(response.context['page_obj']),
+                            count,
+                            'Ошибка:неверное количество постов.'
+                        )
+
 
 class FollowViewsTest(TestCase):
     @classmethod
@@ -235,7 +260,7 @@ class FollowViewsTest(TestCase):
         self.authorised_client = Client()
         self.authorised_client.force_login(self.user)
         self.authorised_author = Client()
-        self.authorised_author.force_login(self.user)
+        self.authorised_author.force_login(self.author)
 
     def test_follower(self):
         """Авторизованный пользователь может подписываться на
@@ -247,7 +272,10 @@ class FollowViewsTest(TestCase):
                 args=(self.author,)
             )
         )
+        followed_author = Follow.objects.all().latest('id')
         self.assertEqual(Follow.objects.count(), count_follow + 1)
+        self.assertEqual(followed_author.user_id, self.user.id)
+        self.assertEqual(followed_author.author_id, self.author.id)
 
     def test_unfollow_author(self):
         """Авторизованный пользователь может удалять авторов из подписки"""
@@ -268,6 +296,9 @@ class FollowViewsTest(TestCase):
         кто на него подписан и не появляется в ленте тех,
         кто не подписан"""
         Post.objects.all().delete()
+        unfollower_user = User.objects.create_user(username='unfollower_user')
+        authorized_unfollower_user = Client()
+        authorized_unfollower_user.force_login(unfollower_user)
         post = Post.objects.create(
             text='test_follower',
             author=self.author,
@@ -278,6 +309,35 @@ class FollowViewsTest(TestCase):
         response = self.authorised_client.get(
             reverse('posts:follow_index'))
         self.assertIn(post, response.context['page_obj'])
-        response = self.client.get(
+        response = authorized_unfollower_user.get(
             reverse('posts:follow_index'))
-        self.assertTrue(HTTPStatus.NOT_FOUND)
+        self.assertNotIn(post, response.context['page_obj'])
+
+    def test_double_follow(self):
+        """Проверка невозможности подписки на пользователя два раза"""
+        count_follow = Follow.objects.count()
+        self.authorised_client.post(
+            reverse(
+                'posts:profile_follow',
+                args=(self.author,)
+            )
+        )
+        count_follow_1 = Follow.objects.count()
+        self.assertEqual(count_follow + 1, count_follow_1)
+        self.authorised_client.post(
+            reverse(
+                'posts:profile_follow',
+                args=(self.author,)
+            )
+        )
+        assert self.user.follower.count() == 1, 'Подписался два раза'
+
+    def test_no_self_follow(self):
+        """Отсутствие подписки на себя"""
+        self.authorised_author.post(
+            reverse(
+                'posts:profile_follow',
+                args=(self.author,)
+            )
+        )
+        assert self.author.follower.count() == 0, 'Подписался на себя'
