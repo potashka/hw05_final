@@ -201,28 +201,6 @@ class PaginatorViewsTest(TestCase):
                 (self.user.username,)),
             ('posts:group_list',
                 (self.group.slug,)),
-        )
-        pages = (
-            ('?page=1', QUANTITY_OF_POSTS),
-            ('?page=2', (NUM_POSTS_PAG_TEST - QUANTITY_OF_POSTS)),
-        )
-        for url, args in page_urls:
-            with self.subTest():
-                for page, count in pages:
-                    with self.subTest():
-                        response = self.client.get(
-                            reverse(url, args=args)
-                            + page
-                        )
-                        self.assertEqual(
-                            len(response.context['page_obj']),
-                            count,
-                            'Ошибка:неверное количество постов.'
-                        )
-
-    def test_follow_page_contains_records(self):
-        '''Проверка количества постов на странице follower'''
-        page_urls = (
             ('posts:follow_index', None),
         )
         pages = (
@@ -233,7 +211,13 @@ class PaginatorViewsTest(TestCase):
             with self.subTest():
                 for page, count in pages:
                     with self.subTest():
-                        response = self.authorized_client.get(
+                        if url == 'posts:follow_index':
+                            response = self.authorized_client.get(
+                            reverse(url, args=args)
+                            + page
+                        )
+                        else:
+                            response = self.client.get(
                             reverse(url, args=args)
                             + page
                         )
@@ -315,22 +299,21 @@ class FollowViewsTest(TestCase):
 
     def test_double_follow(self):
         """Проверка невозможности подписки на пользователя два раза"""
-        count_follow = Follow.objects.count()
+        Follow.objects.all().delete()
         self.authorised_client.post(
             reverse(
                 'posts:profile_follow',
                 args=(self.author,)
             )
         )
-        count_follow_1 = Follow.objects.count()
-        self.assertEqual(count_follow + 1, count_follow_1)
+        self.assertEqual(Follow.objects.count(), 1)
         self.authorised_client.post(
             reverse(
                 'posts:profile_follow',
                 args=(self.author,)
             )
         )
-        assert self.user.follower.count() == 1, 'Подписался два раза'
+        self.assertEqual(Follow.objects.count(), 1)
 
     def test_no_self_follow(self):
         """Отсутствие подписки на себя"""
@@ -340,4 +323,4 @@ class FollowViewsTest(TestCase):
                 args=(self.author,)
             )
         )
-        assert self.author.follower.count() == 0, 'Подписался на себя'
+        self.assertEqual(Follow.objects.count(), 0)
