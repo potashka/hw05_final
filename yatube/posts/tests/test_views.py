@@ -213,14 +213,14 @@ class PaginatorViewsTest(TestCase):
                     with self.subTest():
                         if url == 'posts:follow_index':
                             response = self.authorized_client.get(
-                            reverse(url, args=args)
-                            + page
-                        )
+                                reverse(url, args=args)
+                                + page
+                            )
                         else:
                             response = self.client.get(
-                            reverse(url, args=args)
-                            + page
-                        )
+                                reverse(url, args=args)
+                                + page
+                            )
                         self.assertEqual(
                             len(response.context['page_obj']),
                             count,
