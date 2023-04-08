@@ -2,7 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import CommentForm, PostForm
-from .models import Follow, Group, Post, User
+from .models import Comment, Follow, Group, Post, User
 from .utils import get_page_context
 
 
@@ -95,9 +95,46 @@ def post_edit(request, post_id):
 
 
 @login_required
+def post_delete(request, post_id):
+    post = get_object_or_404(Post, pk=post_id)
+    if request.user.pk != post.author.pk:
+        return redirect('posts:profile', post.author)
+    post.delete()
+    return redirect('posts:profile', request.user.username)
+
+
+@login_required
 def add_comment(request, post_id):
     post = get_object_or_404(Post, pk=post_id)
     form = CommentForm(request.POST or None)
+    if form.is_valid():
+        comment = form.save(commit=False)
+        comment.author = request.user
+        comment.post = post
+        comment.save()
+    return redirect('posts:post_detail', post_id=post_id)
+
+
+@login_required
+def delete_comment(request, post_id, id):
+    comment = get_object_or_404(Comment, id=id)
+    if request.user.pk != comment.author.pk:
+        return redirect('posts:post_detail', post_id=post_id)
+    comment.delete()
+    return redirect('posts:post_detail', post_id=post_id)
+
+
+@login_required
+def edit_comment(request, post_id, id):
+    comment = Comment.objects.get(id=id)  # get_object_or_404(Comment, id=id)
+    post = get_object_or_404(Post, pk=post_id)
+    if request.user.pk != comment.author.pk:
+        return redirect('posts:post_detail', post_id=id)
+    form = CommentForm(
+        request.POST or None,
+        files=request.FILES or None,
+        instance=comment
+    )
     if form.is_valid():
         comment = form.save(commit=False)
         comment.author = request.user

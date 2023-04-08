@@ -37,8 +37,11 @@
       {% endthumbnail %}
       <p>{{ post.text|linebreaks}}</p>
       {% if request.user == post.author %}
-        <a class="btn btn-primary" href="{% url 'posts:post_edit' post_id=post.pk %}">
+        <a class="btn btn-secondary" href="{% url 'posts:post_edit' post_id=post.pk %}">
           Редактировать запись
+        </a>
+        <a class="btn btn-secondary" href="{% url 'posts:post_delete' post_id=post.pk %}">
+          Удалить запись
         </a>
       {% endif %}
       {% include 'posts/includes/post_comments.html'%}

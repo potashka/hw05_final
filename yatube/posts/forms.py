@@ -14,7 +14,7 @@ class PostForm(forms.ModelForm):
             'image': 'Приложите картинку'
         }
         help_texts = {
-            'text': 'Любую абракадабру',
+            'text': 'Любой текст',
             'group': 'Из уже существующих',
             'image': 'Картинка'
         }
