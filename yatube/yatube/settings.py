@@ -23,6 +23,7 @@ CACHES = {
 }
 
 ALLOWED_HOSTS = [
+    '84.252.143.225',
     'localhost',
     '127.0.0.1',
     '[::1]',
